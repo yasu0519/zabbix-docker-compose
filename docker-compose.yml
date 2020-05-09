@@ -1,0 +1,60 @@
+version: "3"
+services:
+  #------------------------------------------------------------------------------
+  # mysql server
+  #
+  mysql-zbx:
+    tty:    true
+    volumes:
+      - ./env/var/lib/mysql:/var/lib/mysql:rw
+    environment:
+      MYSQL_DATABASE:       ${DB_NAME}
+      MYSQL_USER:           ${DB_USER}
+      MYSQL_PASSWORD:       ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD:  ${DB_ROOT_PASSWORD}
+  #  command: mysqld --character-set-server=utf8 --collation-server=utf8_unicode_ci
+    image:  mysql:5.7
+    command:  mysqld --character-set-server=utf8 --collation-server=utf8_bin
+
+  #------------------------------------------------------------------------------
+  # java gateway
+  #
+  java-gateway-zbx:
+    tty:    true
+    image:  zabbix/zabbix-java-gateway:${OS}-${VERSION}
+
+  #------------------------------------------------------------------------------
+  # zabbix server
+  #
+  zabbix-server:
+    tty:    true
+    environment:
+      DB_SERVER_HOST:       mysql-zbx
+      MYSQL_DATABASE:       ${DB_NAME}
+      MYSQL_USER:           ${DB_USER}
+      MYSQL_PASSWORD:       ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD:  ${DB_ROOT_PASSWORD}
+      ZBX_JAVAGATEWAY:      java-gateway-zbx
+      ZBX_DEBUGLEVEL:       ${LOG_LEVEL}
+    ports:
+      - "10051:10051"
+    image:  zabbix/zabbix-server-mysql:${OS}-${VERSION}
+
+  #------------------------------------------------------------------------------
+  # nginx
+  #
+  nginx-zbx:
+    tty:    true
+    environment:
+      ZBX_SERVER_NAME:      ${ZBX_SERVER_NAME}
+      DB_SERVER_HOST:       mysql-zbx
+      MYSQL_DATABASE:       ${DB_NAME}
+      MYSQL_USER:           ${DB_USER}
+      MYSQL_PASSWORD:       ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD:  ${DB_ROOT_PASSWORD}
+      PHP_TZ:               ${PHP_TZ}
+    ports:
+        - ${HTTP_PORT}:80
+        - ${HTTPS_PORT}:443
+    image:  zabbix/zabbix-web-nginx-mysql:${OS}-${VERSION}
+
